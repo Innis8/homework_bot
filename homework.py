@@ -74,7 +74,7 @@ def get_api_answer(current_timestamp):
         error_message = (
             f'Ошибка обращения к эндпоинту {ENDPOINT}, '
             f'код ответа API: {response.status_code}'
-            )
+        )
         logger.error(error_message)
         raise exceptions.APIStatusCodeException(error_message)
 
