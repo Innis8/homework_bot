@@ -148,8 +148,9 @@ def main():
         raise exceptions.RequiredTokenIsMissingException(error_message)
 
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    # точка отсчета, временная метка - 1мес. назад
-    current_timestamp = int(time.time() - 2629743)
+    # точка отсчета, временная метка - unix-time в сек. 1мес. назад - 2629743
+    # 10 минут назад - 600
+    current_timestamp = int(time.time() - 600)
     earlier_error = None
     earlier_status = None
 
