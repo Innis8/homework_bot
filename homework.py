@@ -15,6 +15,8 @@ load_dotenv()
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+TEN_MINUTES_AGO = 600
+ONE_MONTH_AGO = 2629743
 
 RETRY_TIME = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
@@ -46,7 +48,6 @@ formatter = logging.Formatter(
     '%(message)s'
 )
 handler.setFormatter(formatter)
-# logger.info('test INFO-level log record')
 
 
 def send_message(bot, message):
@@ -55,7 +56,7 @@ def send_message(bot, message):
         bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
         logger.info(f'Бот отправил сообщение: {message}')
 
-    except exceptions.SendMessageError:
+    except exceptions.SendMessageException:
         logger.error('Ошибка: бот не смог отправить сообщение')
 
 
@@ -63,12 +64,13 @@ def get_api_answer(current_timestamp):
     """Делает запрос к единственному эндпоинту API-сервиса."""
     timestamp = current_timestamp or int(time.time())
     params = {'from_date': timestamp}
+
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=params)
-        # response = requests.get(ENDPOINT, HEADERS, params=params)
 
-    except exceptions.APIStatusCodeException:
-        logger.error(f'Ошибка обращения к эндпоинту {ENDPOINT}')
+    except Exception as error:
+        error_mmessage = f'Ошибка при запросе: {error}'
+        logger.error(error_mmessage)
 
     if response.status_code != HTTPStatus.OK:
         error_message = (
@@ -78,7 +80,15 @@ def get_api_answer(current_timestamp):
         logger.error(error_message)
         raise exceptions.APIStatusCodeException(error_message)
 
-    return response.json()
+    try:
+        response_content = response.json()
+
+    except ValueError as error:
+        error_message = f'Ошибка формата ответа сервера: {error}'
+        logger.error(error_message)
+        response_content = response.content
+
+    return response_content
 
 
 def check_response(response):
@@ -112,20 +122,25 @@ def check_response(response):
 def parse_status(homework):
     """Извлекает из информации о домашней работе статус этой работы."""
     try:
-        homework_name = homework.get('homework_name')
+        homework_name = homework['homework_name']
 
     except KeyError as error:
         error_message = f'Ошибка доступа по ключу homework_name: {error}'
         logger.error(error_message)
 
     try:
-        homework_status = homework.get('status')
+        homework_status = homework['status']
 
     except KeyError as error:
         error_message = f'Ошибка доступа по ключу status: {error}'
         logger.error(error_message)
 
-    verdict = HOMEWORK_STATUSES[homework_status]
+    try:
+        verdict = HOMEWORK_STATUSES[homework_status]
+    except KeyError as error:
+        error_message = f'Ошибка при обновлении ключа status: {error}'
+        logger.error(error_message)
+        raise KeyError
 
     if verdict is None:
         error_message = 'Неизвестный статус домашней работы'
@@ -148,9 +163,7 @@ def main():
         raise exceptions.RequiredTokenIsMissingException(error_message)
 
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    # точка отсчета, временная метка - unix-time в сек. 1мес. назад - 2629743
-    # 10 минут назад - 600
-    current_timestamp = int(time.time() - 600)
+    current_timestamp = int(time.time() - TEN_MINUTES_AGO)
     earlier_error = None
     earlier_status = None
 
@@ -176,11 +189,11 @@ def main():
             else:
                 logger.debug('Обновления статуса отсутствуют')
 
-            time.sleep(RETRY_TIME)
-
         except Exception as error:
-            message = f'Сбой в работе программы: {error}'
-            print(message)
+            error_message = f'Сбой в работе программы: {error}'
+            logger.error(error_message)
+
+        finally:
             time.sleep(RETRY_TIME)
 
 

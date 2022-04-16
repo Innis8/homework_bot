@@ -25,7 +25,7 @@ class StatusIsUnknownException(Exception):
     pass
 
 
-class SendMessageError(Exception):
+class SendMessageException(Exception):
     """Исключение для ошибки отправки сообщения."""
 
     pass
