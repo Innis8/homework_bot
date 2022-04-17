@@ -106,10 +106,16 @@ def check_response(response):
         logger.error(error_message)
         raise exceptions.CheckResponseException(error_message)
 
-    if len(homeworks_list) == 0:
-        error_message = 'За последнее время домашних работ не найдено'
+    try:
+        if len(homeworks_list) == 0:
+            error_message = 'За последнее время домашних работ не найдено'
+            logger.error(error_message)
+            raise exceptions.CheckResponseException(error_message)
+
+    except TypeError as error:
+        error_message = f'Ошибка. Неверный тип итерируемого объекта: {error}'
         logger.error(error_message)
-        raise exceptions.CheckResponseException(error_message)
+        raise TypeError
 
     if not isinstance(homeworks_list, list):
         error_message = 'В ответе API домашние работы представлены не списком'
@@ -127,6 +133,7 @@ def parse_status(homework):
     except KeyError as error:
         error_message = f'Ошибка доступа по ключу homework_name: {error}'
         logger.error(error_message)
+        raise KeyError
 
     try:
         homework_status = homework['status']
@@ -134,9 +141,11 @@ def parse_status(homework):
     except KeyError as error:
         error_message = f'Ошибка доступа по ключу status: {error}'
         logger.error(error_message)
+        raise KeyError
 
     try:
         verdict = HOMEWORK_STATUSES[homework_status]
+
     except KeyError as error:
         error_message = f'Ошибка при обновлении ключа status: {error}'
         logger.error(error_message)
@@ -181,7 +190,7 @@ def main():
 
         try:
             homeworks = check_response(response)
-            homeworks_status = homeworks[0].get('status')
+            homeworks_status = homeworks[0]['status']
             if homeworks_status != earlier_status:
                 earlier_status = homeworks_status
                 message = parse_status(homeworks[0])
