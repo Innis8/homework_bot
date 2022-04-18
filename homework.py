@@ -16,6 +16,8 @@ PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 TEN_MINUTES_AGO = 600
+ONE_DAY_AGO = 86400
+ONE_WEEK_AGO = 604800
 ONE_MONTH_AGO = 2629743
 
 RETRY_TIME = 600
@@ -106,19 +108,13 @@ def check_response(response):
         logger.error(error_message)
         raise exceptions.CheckResponseException(error_message)
 
-    try:
-        if len(homeworks_list) == 0:
-            error_message = 'За последнее время домашних работ не найдено'
-            logger.error(error_message)
-            raise exceptions.CheckResponseException(error_message)
-
-    except TypeError as error:
-        error_message = f'Ошибка. Неверный тип итерируемого объекта: {error}'
-        logger.error(error_message)
-        raise TypeError
-
     if not isinstance(homeworks_list, list):
         error_message = 'В ответе API домашние работы представлены не списком'
+        logger.error(error_message)
+        raise exceptions.CheckResponseException(error_message)
+
+    if len(homeworks_list) == 0:
+        error_message = 'За последнее время домашних работ не найдено'
         logger.error(error_message)
         raise exceptions.CheckResponseException(error_message)
 
@@ -172,7 +168,7 @@ def main():
         raise exceptions.RequiredTokenIsMissingException(error_message)
 
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    current_timestamp = int(time.time() - TEN_MINUTES_AGO)
+    current_timestamp = int(time.time() - ONE_MONTH_AGO)
     earlier_error = None
     earlier_status = None
 
